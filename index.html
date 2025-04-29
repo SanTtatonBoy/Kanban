@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kanban Estático</title>
+  <style>
+    /* Reset básico */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #eef2f5;
+      color: #333;
+      padding: 20px;
+    }
+    .add-task {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .add-task input, .add-task select, .add-task button {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    .add-task button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .add-task button:hover { background: #0056b3; }
+
+    .board {
+      display: flex;
+      gap: 20px;
+    }
+    .column {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+    }
+    .column-header {
+      padding: 15px;
+      font-size: 1.2em;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+      background: #f7f7f7;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
+    .task-list {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    .task {
+      position: relative;
+      background: #fff;
+      margin-bottom: 12px;
+      padding: 12px 40px 12px 12px;
+      border-left: 5px solid #6c757d;
+      border-radius: 4px;
+      cursor: grab;
+      transition: box-shadow 0.2s;
+    }
+    .task:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .task.dragging { opacity: 0.5; }
+
+    /* Prioridades */
+    .task.low { border-left-color: #28a745; }
+    .task.medium { border-left-color: #fd7e14; }
+    .task.high { border-left-color: #dc3545; }
+
+    /* Botão de excluir */
+    .delete-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: transparent;
+      border: none;
+      font-size: 1.2em;
+      color: #888;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .delete-btn:hover { color: #dc3545; }
+  </style>
+</head>
+<body>
+  <div class="add-task">
+    <input type="text" id="newTaskInput" placeholder="Nova tarefa..." />
+    <select id="prioritySelect">
+      <option value="low">Baixa (verde)</option>
+      <option value="medium">Média (laranja)</option>
+      <option value="high">Alta (vermelho)</option>
+    </select>
+    <button id="addTaskBtn">Adicionar</button>
+  </div>
+
+  <div class="board">
+    <div class="column">
+      <div class="column-header">A Fazer</div>
+      <div class="task-list" id="todo" data-status="todo"></div>
+    </div>
+    <div class="column">
+      <div class="column-header">Fazendo</div>
+      <div class="task-list" id="doing" data-status="doing"></div>
+    </div>
+    <div class="column">
+      <div class="column-header">Feito</div>
+      <div class="task-list" id="done" data-status="done"></div>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById('newTaskInput');
+    const prioritySelect = document.getElementById('prioritySelect');
+    const addBtn = document.getElementById('addTaskBtn');
+    const lists = document.querySelectorAll('.task-list');
+
+    let tasks = JSON.parse(localStorage.getItem('kanbanTasks') || '[]');
+
+    function saveTasks() {
+      localStorage.setItem('kanbanTasks', JSON.stringify(tasks));
+    }
+
+    function createTaskElement(task) {
+      const div = document.createElement('div');
+      div.className = `task ${task.priority}`;
+      div.draggable = true;
+      div.textContent = task.content;
+      div.dataset.id = task.id;
+
+      // Botão de excluir
+      const btn = document.createElement('button');
+      btn.className = 'delete-btn';
+      btn.innerHTML = '&times;';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tasks = tasks.filter(t => t.id !== task.id);
+        saveTasks();
+        renderTasks();
+      });
+      div.appendChild(btn);
+
+      div.addEventListener('dragstart', () => div.classList.add('dragging'));
+      div.addEventListener('dragend', () => div.classList.remove('dragging'));
+      return div;
+    }
+
+    function renderTasks() {
+      lists.forEach(list => list.innerHTML = '');
+      tasks.forEach(task => {
+        const el = createTaskElement(task);
+        document.getElementById(task.status).appendChild(el);
+      });
+    }
+
+    addBtn.addEventListener('click', () => {
+      const content = input.value.trim();
+      if (!content) return;
+      const newTask = {
+        id: Date.now().toString(),
+        content,
+        status: 'todo',
+        priority: prioritySelect.value
+      };
+      tasks.push(newTask);
+      saveTasks();
+      renderTasks();
+      input.value = '';
+    });
+
+    lists.forEach(list => {
+      list.addEventListener('dragover', e => {
+        e.preventDefault();
+        const dragging = document.querySelector('.dragging');
+        const after = getDragAfterElement(list, e.clientY);
+        if (after == null) list.appendChild(dragging);
+        else list.insertBefore(dragging, after);
+      });
+      list.addEventListener('drop', () => {
+        const dragging = document.querySelector('.dragging');
+        const id = dragging.dataset.id;
+        const status = list.dataset.status;
+        tasks = tasks.map(t => t.id === id ? { ...t, status } : t);
+        saveTasks();
+      });
+    });
+
+    function getDragAfterElement(container, y) {
+      const elements = [...container.querySelectorAll('.task:not(.dragging)')];
+      return elements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) return { offset, element: child };
+        return closest;
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    renderTasks();
+  </script>
+</body>
+</html>
