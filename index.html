@@ -24,214 +24,223 @@
     .task.high { border-left-color:#dc3545; }
     .delete-btn { position:absolute; top:8px; right:8px; background:transparent; border:none; font-size:1.2em; color:#888; cursor:pointer; transition:color .2s; }
     .delete-btn:hover { color:#dc3545; }
+    #logoutBtn { margin-bottom:20px; padding:6px 12px; cursor:pointer; }
   </style>
 </head>
 <body>
-<div id="auth-ui">
-  <h3>Login ou Cadastro</h3>
-  <input  type="email"    id="emailInput" placeholder="E-mail" />
-  <input  type="password" id="pwInput"    placeholder="Senha" />
-  <button id="loginBtn">Entrar</button>
-  <button id="registerBtn">Cadastrar</button>
-  <div id="authError" style="color:red; margin-top:8px;"></div>
-</div>
-<div id="kanban-ui" style="display:none;">
-  <h2>Kanban Sincronizado</h2>
-  <div class="add-task">
-    <input type="text" id="newTaskInput" placeholder="Nova tarefa..." />
-    <select id="prioritySelect">
-      <option value="low">Baixa (verde)</option>
-      <option value="medium">Média (laranja)</option>
-      <option value="high">Alta (vermelho)</option>
-    </select>
-    <button id="addTaskBtn">Adicionar</button>
+
+  <!-- UI de autenticação -->
+  <div id="auth-ui">
+    <h3>Login ou Cadastro</h3>
+    <input  type="email"    id="emailInput" placeholder="E-mail" />
+    <input  type="password" id="pwInput"    placeholder="Senha" />
+    <button id="loginBtn">Entrar</button>
+    <button id="registerBtn">Cadastrar</button>
+    <div id="authError" style="color:red; margin-top:8px;"></div>
   </div>
-  <div class="board">
-    <div class="column">
-      <div class="column-header">A Fazer</div>
-      <div class="task-list" id="todo" data-status="todo"></div>
+
+  <!-- UI do Kanban (inicialmente oculta) -->
+  <div id="kanban-ui" style="display:none;">
+    <button id="logoutBtn">Logout</button>
+    <h2>Kanban Sincronizado</h2>
+    <div class="add-task">
+      <input type="text" id="newTaskInput" placeholder="Nova tarefa..." />
+      <select id="prioritySelect">
+        <option value="low">Baixa (verde)</option>
+        <option value="medium">Média (laranja)</option>
+        <option value="high">Alta (vermelho)</option>
+      </select>
+      <button id="addTaskBtn">Adicionar</button>
     </div>
-    <div class="column">
-      <div class="column-header">Fazendo</div>
-      <div class="task-list" id="doing" data-status="doing"></div>
-    </div>
-    <div class="column">
-      <div class="column-header">Feito</div>
-      <div class="task-list" id="done" data-status="done"></div>
+    <div class="board">
+      <div class="column">
+        <div class="column-header">A Fazer</div>
+        <div class="task-list" id="todo" data-status="todo"></div>
+      </div>
+      <div class="column">
+        <div class="column-header">Fazendo</div>
+        <div class="task-list" id="doing" data-status="doing"></div>
+      </div>
+      <div class="column">
+        <div class="column-header">Feito</div>
+        <div class="task-list" id="done" data-status="done"></div>
+      </div>
     </div>
   </div>
-</div>
 
-  <!-- Firebase modular SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import {
-    getAuth,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    onAuthStateChanged,
-    signOut
-  } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import {
-    getFirestore,
-    collection,
-    query,
-    where,
-    onSnapshot,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    doc
-  } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <!-- Firebase modular SDK e lógica -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      onSnapshot,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      doc
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  // Configuração do Firebase (modular)
-  const firebaseConfig = {
-    apiKey: "AIzaSyCgkozuliocw1L-27hjccsfNQW_boebkMM",
-    authDomain: "kanban-c9ff0.firebaseapp.com",
-    projectId: "kanban-c9ff0",
-    storageBucket: "kanban-c9ff0.appspot.com",
-    messagingSenderId: "341186282619",
-    appId: "1:341186282619:web:ee58ebb311a7c90f048ede"
-  };
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCgkozuliocw1L-27hjccsfNQW_boebkMM",
+      authDomain: "kanban-c9ff0.firebaseapp.com",
+      projectId: "kanban-c9ff0",
+      storageBucket: "kanban-c9ff0.appspot.com",
+      messagingSenderId: "341186282619",
+      appId: "1:341186282619:web:ee58ebb311a7c90f048ede"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
 
-  // Referências aos elementos de UI
-  const authUI    = document.getElementById('auth-ui');
-  const kanbanUI  = document.getElementById('kanban-ui');
-  const emailIn   = document.getElementById('emailInput');
-  const pwIn      = document.getElementById('pwInput');
-  const loginBtn  = document.getElementById('loginBtn');
-  const regBtn    = document.getElementById('registerBtn');
-  const authError = document.getElementById('authError');
+    // Elementos de UI
+    const authUI    = document.getElementById('auth-ui');
+    const kanbanUI  = document.getElementById('kanban-ui');
+    const emailIn   = document.getElementById('emailInput');
+    const pwIn      = document.getElementById('pwInput');
+    const loginBtn  = document.getElementById('loginBtn');
+    const regBtn    = document.getElementById('registerBtn');
+    const authError = document.getElementById('authError');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-  // Eventos de login e cadastro
-  loginBtn.addEventListener('click', () => {
-    authError.textContent = '';
-    signInWithEmailAndPassword(auth, emailIn.value, pwIn.value)
-      .catch(e => authError.textContent = e.message);
-  });
-  regBtn.addEventListener('click', () => {
-    authError.textContent = '';
-    createUserWithEmailAndPassword(auth, emailIn.value, pwIn.value)
-      .catch(e => authError.textContent = e.message);
-  });
-
-  // Observa mudanças de estado de autenticação
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      // usuário logado → mostra Kanban
-      authUI.style.display   = 'none';
-      kanbanUI.style.display = 'block';
-      initKanban(user.uid);
-    } else {
-      // não logado → mostra formulário
-      authUI.style.display   = 'block';
-      kanbanUI.style.display = 'none';
-    }
-  });
-
-  // Função initKanban recebe o userId do usuário logado
-  function initKanban(userId) {
-    const input           = document.getElementById('newTaskInput');
-    const prioritySelect  = document.getElementById('prioritySelect');
-    const addBtn          = document.getElementById('addTaskBtn');
-    const lists           = document.querySelectorAll('.task-list');
-    let tasks             = [];
-
-    const tasksRef = collection(db, 'tasks');
-    const q        = query(tasksRef, where('userId', '==', userId));
-
-    // Listener em tempo real
-    onSnapshot(q, snap => {
-      tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderTasks();
-    }, e => console.error('Snapshot erro:', e));
-
-    async function addTask(content, priority) {
-      try {
-        await addDoc(tasksRef, { content, status: 'todo', priority, userId });
-      } catch (e) {
-        console.error('Add erro:', e);
-      }
-    }
-    async function updateTask(id, fields) {
-      try {
-        await updateDoc(doc(db, 'tasks', id), fields);
-      } catch (e) {
-        console.error('Update erro:', e);
-      }
-    }
-    async function deleteTaskById(id) {
-      try {
-        await deleteDoc(doc(db, 'tasks', id));
-      } catch (e) {
-        console.error('Delete erro:', e);
-      }
-    }
-
-    function createTaskElement(task) {
-      const div = document.createElement('div');
-      div.className    = `task ${task.priority}`;
-      div.draggable    = true;
-      div.textContent  = task.content;
-      div.dataset.id   = task.id;
-
-      const btn = document.createElement('button');
-      btn.className = 'delete-btn';
-      btn.innerHTML = '&times;';
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        deleteTaskById(task.id);
-      });
-      div.appendChild(btn);
-
-      div.addEventListener('dragstart', () => div.classList.add('dragging'));
-      div.addEventListener('dragend',   () => div.classList.remove('dragging'));
-      return div;
-    }
-
-    function renderTasks() {
-      lists.forEach(list => list.innerHTML = '');
-      tasks.forEach(task => {
-        const el = createTaskElement(task);
-        document.getElementById(task.status).appendChild(el);
-      });
-    }
-
-    addBtn.addEventListener('click', () => {
-      const content = input.value.trim();
-      if (!content) return;
-      addTask(content, prioritySelect.value);
-      input.value = '';
+    // Login e cadastro
+    loginBtn.addEventListener('click', () => {
+      authError.textContent = '';
+      signInWithEmailAndPassword(auth, emailIn.value, pwIn.value)
+        .catch(e => authError.textContent = e.message);
+    });
+    regBtn.addEventListener('click', () => {
+      authError.textContent = '';
+      createUserWithEmailAndPassword(auth, emailIn.value, pwIn.value)
+        .catch(e => authError.textContent = e.message);
+    });
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth);
     });
 
-    lists.forEach(list => {
-      list.addEventListener('dragover', e => {
-        e.preventDefault();
-        const dragging = document.querySelector('.dragging');
-        const after    = getDragAfterElement(list, e.clientY);
-        if (!after) list.appendChild(dragging);
-        else list.insertBefore(dragging, after);
-      });
-      list.addEventListener('drop', () => {
-        const dragging = document.querySelector('.dragging');
-        updateTask(dragging.dataset.id, { status: list.dataset.status });
-      });
+    // Controla visibilidade com base no estado de autenticação
+    onAuthStateChanged(auth, user => {
+      // só consideramos “logado” se NÃO for anônimo
+      if (user && !user.isAnonymous) {
+        authUI.style.display   = 'none';
+        kanbanUI.style.display = 'block';
+        initKanban(user.uid);
+      } else {
+        authUI.style.display   = 'block';
+        kanbanUI.style.display = 'none';
+      }
     });
 
-    function getDragAfterElement(container, y) {
-      const elements = [...container.querySelectorAll('.task:not(.dragging)')];
-      return elements.reduce((closest, child) => {
-        const box    = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        return (offset < 0 && offset > closest.offset)
-          ? { offset, element: child }
-          : closest;
-      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    // Função principal do Kanban
+    function initKanban(userId) {
+      const input          = document.getElementById('newTaskInput');
+      const prioritySelect = document.getElementById('prioritySelect');
+      const addBtn         = document.getElementById('addTaskBtn');
+      const lists          = document.querySelectorAll('.task-list');
+      let tasks            = [];
+
+      const tasksRef = collection(db, 'tasks');
+      const q        = query(tasksRef, where('userId', '==', userId));
+
+      // Snapshot em tempo real
+      onSnapshot(q, snap => {
+        tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderTasks();
+      }, e => console.error('Snapshot erro:', e));
+
+      async function addTask(content, priority) {
+        try {
+          await addDoc(tasksRef, { content, status: 'todo', priority, userId });
+        } catch (e) {
+          console.error('Add erro:', e);
+        }
+      }
+      async function updateTask(id, fields) {
+        try {
+          await updateDoc(doc(db, 'tasks', id), fields);
+        } catch (e) {
+          console.error('Update erro:', e);
+        }
+      }
+      async function deleteTaskById(id) {
+        try {
+          await deleteDoc(doc(db, 'tasks', id));
+        } catch (e) {
+          console.error('Delete erro:', e);
+        }
+      }
+
+      function createTaskElement(task) {
+        const div = document.createElement('div');
+        div.className   = `task ${task.priority}`;
+        div.draggable   = true;
+        div.textContent = task.content;
+        div.dataset.id  = task.id;
+
+        const btn = document.createElement('button');
+        btn.className = 'delete-btn';
+        btn.innerHTML = '&times;';
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          deleteTaskById(task.id);
+        });
+        div.appendChild(btn);
+
+        div.addEventListener('dragstart', () => div.classList.add('dragging'));
+        div.addEventListener('dragend',   () => div.classList.remove('dragging'));
+        return div;
+      }
+
+      function renderTasks() {
+        lists.forEach(list => list.innerHTML = '');
+        tasks.forEach(task => {
+          const el = createTaskElement(task);
+          document.getElementById(task.status).appendChild(el);
+        });
+      }
+
+      addBtn.addEventListener('click', () => {
+        const content = input.value.trim();
+        if (!content) return;
+        addTask(content, prioritySelect.value);
+        input.value = '';
+      });
+
+      lists.forEach(list => {
+        list.addEventListener('dragover', e => {
+          e.preventDefault();
+          const dragging = document.querySelector('.dragging');
+          const after    = getDragAfterElement(list, e.clientY);
+          if (!after) list.appendChild(dragging);
+          else list.insertBefore(dragging, after);
+        });
+        list.addEventListener('drop', () => {
+          const dragging = document.querySelector('.dragging');
+          updateTask(dragging.dataset.id, { status: list.dataset.status });
+        });
+      });
+
+      function getDragAfterElement(container, y) {
+        const elements = [...container.querySelectorAll('.task:not(.dragging)')];
+        return elements.reduce((closest, child) => {
+          const box    = child.getBoundingClientRect();
+          const offset = y - box.top - box.height / 2;
+          return (offset < 0 && offset > closest.offset)
+            ? { offset, element: child }
+            : closest;
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+      }
     }
-  }
-</script>
+  </script>
 </body>
 </html>
