@@ -27,14 +27,15 @@
   </style>
 </head>
 <body>
-  <div id="auth-ui">
-    <h3>Login ou Cadastro</h3>
-    <input type="email" id="emailInput" placeholder="E-mail" />
-    <input type="password" id="pwInput" placeholder="Senha" />
-    <button id="loginBtn">Entrar</button>
-    <button id="registerBtn">Cadastrar</button>
-    <div id="authError" style="color:red; margin-top:8px;"></div>
-  </div>
+<div id="auth-ui">
+  <h3>Login ou Cadastro</h3>
+  <input  type="email"    id="emailInput" placeholder="E-mail" />
+  <input  type="password" id="pwInput"    placeholder="Senha" />
+  <button id="loginBtn">Entrar</button>
+  <button id="registerBtn">Cadastrar</button>
+  <div id="authError" style="color:red; margin-top:8px;"></div>
+</div>
+<div id="kanban-ui" style="display:none;">
   <h2>Kanban Sincronizado</h2>
   <div class="add-task">
     <input type="text" id="newTaskInput" placeholder="Nova tarefa..." />
@@ -59,6 +60,7 @@
       <div class="task-list" id="done" data-status="done"></div>
     </div>
   </div>
+</div>
 
   <!-- Firebase modular SDK -->
 <script type="module">
