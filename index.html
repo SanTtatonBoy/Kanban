@@ -113,24 +113,37 @@
     const authError = document.getElementById('authError');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    // Login e cadastro
+    // Login e cadastro com validação
     loginBtn.addEventListener('click', () => {
       authError.textContent = '';
-      signInWithEmailAndPassword(auth, emailIn.value, pwIn.value)
+      const email = emailIn.value.trim();
+      const pw    = pwIn.value;
+      if (!email || !pw) {
+        authError.textContent = '❌ Preencha e-mail e senha.';
+        return;
+      }
+      signInWithEmailAndPassword(auth, email, pw)
         .catch(e => authError.textContent = e.message);
     });
     regBtn.addEventListener('click', () => {
       authError.textContent = '';
-      createUserWithEmailAndPassword(auth, emailIn.value, pwIn.value)
+      const email = emailIn.value.trim();
+      const pw    = pwIn.value;
+      if (!email || !pw) {
+        authError.textContent = '❌ Preencha e-mail e senha.';
+        return;
+      }
+      if (pw.length < 6) {
+        authError.textContent = '❌ A senha precisa ter ao menos 6 caracteres.';
+        return;
+      }
+      createUserWithEmailAndPassword(auth, email, pw)
         .catch(e => authError.textContent = e.message);
     });
-    logoutBtn.addEventListener('click', () => {
-      signOut(auth);
-    });
+    logoutBtn.addEventListener('click', () => signOut(auth));
 
     // Controla visibilidade com base no estado de autenticação
     onAuthStateChanged(auth, user => {
-      // só consideramos “logado” se NÃO for anônimo
       if (user && !user.isAnonymous) {
         authUI.style.display   = 'none';
         kanbanUI.style.display = 'block';
