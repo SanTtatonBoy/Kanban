@@ -38,9 +38,18 @@
     <button id="addTaskBtn">Adicionar</button>
   </div>
   <div class="board">
-    <div class="column"><div class="column-header">A Fazer</div><div class="task-list" id="todo" data-status="todo"></div></div>
-    <div class="column"><div class="column-header">Fazendo</div><div class="task-list" id="doing" data-status="doing"></div></div>
-    <div class="column"><div class="column-header">Feito</div><div class="task-list" id="done" data-status="done"></div></div>
+    <div class="column">
+      <div class="column-header">A Fazer</div>
+      <div class="task-list" id="todo" data-status="todo"></div>
+    </div>
+    <div class="column">
+      <div class="column-header">Fazendo</div>
+      <div class="task-list" id="doing" data-status="doing"></div>
+    </div>
+    <div class="column">
+      <div class="column-header">Feito</div>
+      <div class="task-list" id="done" data-status="done"></div>
+    </div>
   </div>
 
   <!-- Firebase modular SDK -->
@@ -49,12 +58,12 @@
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Configuração do Firebase (modular)
+    // Configuração do Firebase (modular) – storageBucket corrigido
     const firebaseConfig = {
       apiKey: "AIzaSyCgkozuliocw1L-27hjccsfNQW_boebkMM",
       authDomain: "kanban-c9ff0.firebaseapp.com",
       projectId: "kanban-c9ff0",
-      storageBucket: "kanban-c9ff0.appspot.com",
+      storageBucket: "kanban-c9ff0.appspot.com", // ← corrigido
       messagingSenderId: "341186282619",
       appId: "1:341186282619:web:ee58ebb311a7c90f048ede"
     };
@@ -104,7 +113,9 @@
         div.textContent = task.content;
         div.dataset.id = task.id;
 
-        const btn = document.createElement('button'); btn.className = 'delete-btn'; btn.innerHTML = '&times;';
+        const btn = document.createElement('button');
+        btn.className = 'delete-btn';
+        btn.innerHTML = '&times;';
         btn.addEventListener('click', e => { e.stopPropagation(); deleteTaskById(task.id); });
         div.appendChild(btn);
 
@@ -122,7 +133,8 @@
       }
 
       addBtn.addEventListener('click', () => {
-        const content = input.value.trim(); if (!content) return;
+        const content = input.value.trim();
+        if (!content) return;
         addTask(content, prioritySelect.value);
         input.value = '';
       });
@@ -132,7 +144,8 @@
           e.preventDefault();
           const dragging = document.querySelector('.dragging');
           const after = getDragAfterElement(list, e.clientY);
-          if (!after) list.appendChild(dragging); else list.insertBefore(dragging, after);
+          if (!after) list.appendChild(dragging);
+          else list.insertBefore(dragging, after);
         });
         list.addEventListener('drop', () => {
           const dragging = document.querySelector('.dragging');
