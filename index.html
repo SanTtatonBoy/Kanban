@@ -25,7 +25,7 @@
     .delete-btn { position:absolute; top:8px; right:8px; background:transparent; border:none; font-size:1.2em; color:#888; cursor:pointer; transition:color .2s; }
     .delete-btn:hover { color:#dc3545; }
   </style>
-  <!-- Firebase SDKs -->
+  <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -48,47 +48,49 @@
   </div>
 
   <script>
-    // TODO: substitua pelos valores do seu projeto Firebase
+    // Configuração do Firebase (compat)
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "...",
-      appId: "..."
+      apiKey: "AIzaSyCgkozuliocw1L-27hjccsfNQW_boebkMM",
+      authDomain: "kanban-c9ff0.firebaseapp.com",
+      projectId: "kanban-c9ff0",
+      storageBucket: "kanban-c9ff0.appspot.com",
+      messagingSenderId: "341186282619",
+      appId: "1:341186282619:web:ee58ebb311a7c90f048ede"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
     let userId;
-    auth.signInAnonymously().then(({ user }) => {
-      userId = user.uid;
-      initKanban();
-    }).catch(console.error);
+    auth.signInAnonymously()
+      .then(({ user }) => { userId = user.uid; initKanban(); })
+      .catch(err => console.error('Auth erro:', err));
 
     function initKanban() {
       const input = document.getElementById('newTaskInput');
       const prioritySelect = document.getElementById('prioritySelect');
       const addBtn = document.getElementById('addTaskBtn');
       const lists = document.querySelectorAll('.task-list');
+      let tasks = []; // declaramos aqui
 
       // Escuta em tempo real
-      db.collection('tasks')
-        .where('userId', '==', userId)
-        .onSnapshot(sn => {
-          tasks = sn.docs.map(d => ({ id: d.id, ...d.data() }));
+      db.collection('tasks').where('userId', '==', userId)
+        .onSnapshot(snapshot => {
+          tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           renderTasks();
-        });
+        }, err => console.error('Snapshot erro:', err));
 
       function addTask(content, priority) {
-        db.collection('tasks').add({ content, status: 'todo', priority, userId });
+        db.collection('tasks').add({ content, status: 'todo', priority, userId })
+          .catch(err => console.error('Add erro:', err));
       }
       function updateTask(id, fields) {
-        db.collection('tasks').doc(id).update(fields);
+        db.collection('tasks').doc(id).update(fields)
+          .catch(err => console.error('Update erro:', err));
       }
       function deleteTask(id) {
-        db.collection('tasks').doc(id).delete();
+        db.collection('tasks').doc(id).delete()
+          .catch(err => console.error('Delete erro:', err));
       }
 
       function createTaskElement(task) {
@@ -147,24 +149,5 @@
       }
     }
   </script>
-  <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCgkozuliocw1L-27hjccsfNQW_boebkMM",
-    authDomain: "kanban-c9ff0.firebaseapp.com",
-    projectId: "kanban-c9ff0",
-    storageBucket: "kanban-c9ff0.firebasestorage.app",
-    messagingSenderId: "341186282619",
-    appId: "1:341186282619:web:ee58ebb311a7c90f048ede"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
 </body>
 </html>
