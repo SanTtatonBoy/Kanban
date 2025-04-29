@@ -25,10 +25,6 @@
     .delete-btn { position:absolute; top:8px; right:8px; background:transparent; border:none; font-size:1.2em; color:#888; cursor:pointer; transition:color .2s; }
     .delete-btn:hover { color:#dc3545; }
   </style>
-  <!-- Firebase Compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <h2>Kanban Sincronizado</h2>
@@ -47,8 +43,13 @@
     <div class="column"><div class="column-header">Feito</div><div class="task-list" id="done" data-status="done"></div></div>
   </div>
 
-  <script>
-    // Configuração do Firebase (compat)
+  <!-- Firebase modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Configuração do Firebase (modular)
     const firebaseConfig = {
       apiKey: "AIzaSyCgkozuliocw1L-27hjccsfNQW_boebkMM",
       authDomain: "kanban-c9ff0.firebaseapp.com",
@@ -57,13 +58,16 @@
       messagingSenderId: "341186282619",
       appId: "1:341186282619:web:ee58ebb311a7c90f048ede"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     let userId;
-    auth.signInAnonymously()
-      .then(({ user }) => { userId = user.uid; initKanban(); })
+    signInAnonymously(auth)
+      .then(() => {
+        userId = auth.currentUser.uid;
+        initKanban();
+      })
       .catch(err => console.error('Auth erro:', err));
 
     function initKanban() {
@@ -71,26 +75,26 @@
       const prioritySelect = document.getElementById('prioritySelect');
       const addBtn = document.getElementById('addTaskBtn');
       const lists = document.querySelectorAll('.task-list');
-      let tasks = []; // declaramos aqui
+      let tasks = [];
 
-      // Escuta em tempo real
-      db.collection('tasks').where('userId', '==', userId)
-        .onSnapshot(snapshot => {
-          tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          renderTasks();
-        }, err => console.error('Snapshot erro:', err));
+      const tasksRef = collection(db, 'tasks');
+      const q = query(tasksRef, where('userId', '==', userId));
+      onSnapshot(q, snapshot => {
+        tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderTasks();
+      }, err => console.error('Snapshot erro:', err));
 
-      function addTask(content, priority) {
-        db.collection('tasks').add({ content, status: 'todo', priority, userId })
-          .catch(err => console.error('Add erro:', err));
+      async function addTask(content, priority) {
+        try { await addDoc(tasksRef, { content, status: 'todo', priority, userId }); }
+        catch(e) { console.error('Add erro:', e); }
       }
-      function updateTask(id, fields) {
-        db.collection('tasks').doc(id).update(fields)
-          .catch(err => console.error('Update erro:', err));
+      async function updateTask(id, fields) {
+        try { await updateDoc(doc(db, 'tasks', id), fields); }
+        catch(e) { console.error('Update erro:', e); }
       }
-      function deleteTask(id) {
-        db.collection('tasks').doc(id).delete()
-          .catch(err => console.error('Delete erro:', err));
+      async function deleteTaskById(id) {
+        try { await deleteDoc(doc(db, 'tasks', id)); }
+        catch(e) { console.error('Delete erro:', e); }
       }
 
       function createTaskElement(task) {
@@ -100,9 +104,8 @@
         div.textContent = task.content;
         div.dataset.id = task.id;
 
-        const btn = document.createElement('button');
-        btn.className = 'delete-btn'; btn.innerHTML = '&times;';
-        btn.addEventListener('click', e => { e.stopPropagation(); deleteTask(task.id); });
+        const btn = document.createElement('button'); btn.className = 'delete-btn'; btn.innerHTML = '&times;';
+        btn.addEventListener('click', e => { e.stopPropagation(); deleteTaskById(task.id); });
         div.appendChild(btn);
 
         div.addEventListener('dragstart', () => div.classList.add('dragging'));
